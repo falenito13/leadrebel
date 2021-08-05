@@ -1,9 +1,10 @@
-import {databaseConnection} from "./db.js";
+import {createTable,insertTable} from "./db.js";
 import cheerio from 'cheerio';
 import express from 'express';
 import got from 'got';
 const app = express();
 var vgmUrl = 'https://www.europages.co.uk/business-directory-europe.html';
+createTable();
 var data = () => {
     return got(vgmUrl).then((response) => {
         const $ = cheerio.load(response.body);
@@ -55,34 +56,35 @@ function companiesUrl(ans) {
         })
 }
 
+function check(test){
+  return test === undefined ? 'null' : test;
+}
 function parseHtml(resp) {
     let companyLinks = resp('.company-info a');
-    for (let i = 0; i < companyLinks.length; i++) {
-        gotTemplate(companyLinks[i].attribs.href)
-            .then(ans => {
-                var name = ans('.company-baseline h1 span').text();
-                let country = ans('.company-country span')[1].children[0].data;
-                let address = ans('dd[itemprop="addressLocality"]').text();
-                let vat = ans('dd span[itemprop="vatID"]').text();
-                let categories = ans('.js-breadcrumb-back-heading a')[0].attribs.title;
-                let head_count = ans('.data-list li .icon-key-people').text();
-                let sales_staff = ans('.data-list li .icon-key-sales').text();
-                let sales_turnover = ans('.data-list li .icon-key-ca').text();
-                let phone_number = ans('.js-num-tel').text();
-                // let website = ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title;
-                let export_sales = ans('.data-list li .icon-key-export').text();
-                let keyword_tags = ans('.keyword-tag li[itemprop="itemListElement"]');
-                let description = ans('.company-description').text();
-                let established_year = ans('.organisation-list li');
-                let keywordsArray = [];
-                for (let j = 0; j < keyword_tags.length; j++) {
-                    keywordsArray.push(keyword_tags[j].children[0].data);
-                }
-                databaseConnection(name)
-            })
-
-
-    }
+        for (let i = 0; i < companyLinks.length; i++) {
+            gotTemplate(companyLinks[i].attribs.href)
+                .then(ans => {
+                    var name = check(ans('.company-baseline h1 span').text());
+                    var country = check(ans('.company-country span')[1].children[0].data);
+                    var address = check(ans('dd[itemprop="addressLocality"]').text());
+                    var vat = check(ans('dd span[itemprop="vatID"]').text());
+                    var categories = check(ans('.js-breadcrumb-back-heading a')[0].attribs.title);
+                    var head_count = check(ans('.data-list li .icon-key-people').text());
+                    var sales_staff = check(ans('.data-list li .icon-key-sales').text());
+                    var sales_turnover = check(ans('.data-list li .icon-key-ca').text());
+                    var phone_number = check(ans('.js-num-tel').text().replace(/\s+/g, ''));
+                    var website = check(ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title);
+                    var export_sales = check(ans('.data-list li .icon-key-export').text());
+                    var keyword_tags = check(ans('.keyword-tag li[itemprop="itemListElement"]'));
+                    var description = check(ans('.company-description').text());
+                    var established_year = check(ans('.organisation-list li .data--big').text());
+                    var keywordsArray = [];
+                    for (let j = 0; j < keyword_tags.length; j++) {
+                        keywordsArray.push(keyword_tags[j].children[0].data);
+                    }
+                    insertTable(name, address, website, categories, country, vat, head_count, sales_staff, sales_turnover, phone_number, description, established_year, export_sales, keywordsArray);
+                })
+        }
 }
 
 redirectTo();
