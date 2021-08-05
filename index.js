@@ -1,5 +1,8 @@
-var cheerio = require('cheerio');
-var got = require('got');
+import {databaseConnection} from "./db.js";
+import cheerio from 'cheerio';
+import express from 'express';
+import got from 'got';
+const app = express();
 var vgmUrl = 'https://www.europages.co.uk/business-directory-europe.html';
 var data = () => {
     return got(vgmUrl).then((response) => {
@@ -14,6 +17,7 @@ var data = () => {
         }
         return linkArray;
     })
+
 };
 
 function gotTemplate(url) {
@@ -56,7 +60,7 @@ function parseHtml(resp) {
     for (let i = 0; i < companyLinks.length; i++) {
         gotTemplate(companyLinks[i].attribs.href)
             .then(ans => {
-                let name = ans('.company-baseline h1 span').text();
+                var name = ans('.company-baseline h1 span').text();
                 let country = ans('.company-country span')[1].children[0].data;
                 let address = ans('dd[itemprop="addressLocality"]').text();
                 let vat = ans('dd span[itemprop="vatID"]').text();
@@ -65,8 +69,7 @@ function parseHtml(resp) {
                 let sales_staff = ans('.data-list li .icon-key-sales').text();
                 let sales_turnover = ans('.data-list li .icon-key-ca').text();
                 let phone_number = ans('.js-num-tel').text();
-                let website = ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title;
-                typeof website === "undefined" ? "undefined" : website;
+                // let website = ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title;
                 let export_sales = ans('.data-list li .icon-key-export').text();
                 let keyword_tags = ans('.keyword-tag li[itemprop="itemListElement"]');
                 let description = ans('.company-description').text();
@@ -75,7 +78,10 @@ function parseHtml(resp) {
                 for (let j = 0; j < keyword_tags.length; j++) {
                     keywordsArray.push(keyword_tags[j].children[0].data);
                 }
+                databaseConnection(name)
             })
+
+
     }
 }
 
