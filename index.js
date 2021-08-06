@@ -6,8 +6,8 @@ import got from 'got';
 const app = express();
 var vgmUrl = 'https://www.europages.co.uk/business-directory-europe.html';
 createTable();
-var data = () => {
-    return got(vgmUrl).then((response) => {
+var data = async () => {
+    return await got(vgmUrl,{decompress: false}).then((response) => {
         const $ = cheerio.load(response.body);
         let categoryLinks = $('.sectors-item__title a');
         let linkArray = [];
@@ -22,13 +22,13 @@ var data = () => {
 
 };
 
-function gotTemplate(url) {
-    return got(url).then(r => r.body)
+async function gotTemplate(url) {
+    return await got(url).then(r => r.body)
         .then(cheerio.load)
 }
 
-function redirectTo() {
-    return data().then((ans) => {
+async function redirectTo() {
+    return await data().then((ans) => {
         ans.forEach((el, j) => {
             return gotTemplate(el)
                 .then(resp => {
@@ -52,11 +52,11 @@ function companiesUrl(ans) {
 }
 
 function check(test) {
-    return test === undefined || test === null || test === NaN ? test = 'null' : test;
+    return typeof(test) === undefined ? test = 'null' : test;
 }
 
 function parseHtml(url) {
-    return gotTemplate(url)
+    return gotTemplate(url,{decompress: false})
         .then(resp => {
             let pageArray = [];
             let selector = resp('.pagination-nav a');
@@ -87,7 +87,7 @@ function parseHtml(url) {
 }
 
 async function getRequests(request){
-        return gotTemplate(request)
+        return await gotTemplate(request,{decompress: false})
             .then(async resp => {
                 let companyLinks = resp('.company-info a');
                 let companiesArray = [];
@@ -105,34 +105,18 @@ async function getRequests(request){
 async function sendRequest(url)
 {
     for (let x of url) {
-         await gotTemplate(x)
+      await   gotTemplate(x,{decompress: false})
                 .then(ans => {
                     var name = check(ans('.company-baseline h1 span').text());
-                    if (ans('.company-country span')[1]){
-                        var country = ans('.company-country span')[1].children[0].data;
-                    }
-                    else {
-                        var country = 'null';
-                    }
+                    var country = check(ans('.company-country span')[1].children[0].data);
                     var address = check(ans('dd[itemprop="addressLocality"]').text());
                     var vat = check(ans('dd span[itemprop="vatID"]').text());
-                    if(ans('.js-breadcrumb-back-heading a')[0]){
-                        var categories = ans('.js-breadcrumb-back-heading a')[0].attribs.title;
-                    }
-                    else {
-                        var categories = 'null';
-                    }
+                    var categories = check(ans('.js-breadcrumb-back-heading a')[0].attribs.title);
                     var head_count = check(ans('.data-list li .icon-key-people').text());
                     var sales_staff = check(ans('.data-list li .icon-key-sales').text());
                     var sales_turnover = check(ans('.data-list li .icon-key-ca').text());
                     var phone_number = check(ans('.js-num-tel').text().replace(/\s+/g, ''));
-                    if (ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0]){
-                        var website = ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title;
-                    }
-                    else {
-                        var website = 'null';
-                    }
-
+                    var website = check(ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title);
                     var export_sales = check(ans('.data-list li .icon-key-export').text());
                     var keyword_tags = check(ans('.keyword-tag li[itemprop="itemListElement"]'));
                     var description = check(ans('.company-description').text());
@@ -141,9 +125,9 @@ async function sendRequest(url)
                     for (let j = 0; j < keyword_tags.length; j++) {
                         keywordsArray.push(keyword_tags[j].children[0].data);
                     }
-                    // insertTable(name, country,website,categories,address, vat, head_count, sales_staff, sales_turnover, phone_number, description, established_year, export_sales, keywordsArray);
+                    insertTable(name, country,website,categories,address, vat, head_count, sales_staff, sales_turnover, phone_number, description, established_year, export_sales, keywordsArray);
                 });
     }
 }
 
-redirectTo();
+await redirectTo();
