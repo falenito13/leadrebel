@@ -1,18 +1,15 @@
 import {createTable, insertTable} from "./db.js";
 import cheerio from 'cheerio';
-import express from 'express';
 import got from 'got';
-
-const app = express();
-var vgmUrl = 'https://www.europages.co.uk/business-directory-europe.html';
+const vgmUrl = 'https://www.europages.co.uk/business-directory-europe.html';
 createTable();
 
-var data = async () => {
+let data = async () => {
     /**
      * This method returns links of a sectors.
      */
     try {
-        return await got(vgmUrl, {decompress: false}).then((response) => {
+        return await got(vgmUrl).then((response) => {
             const $ = cheerio.load(response.body);
             let categoryLinks = $('.sectors-item__title a');
             let linkArray = [];
@@ -47,11 +44,11 @@ async function redirectTo() {
      */
     try {
         return await data().then((ans) => {
-            ans.forEach((el, j) => {
+            ans.forEach((el) => {
                 return gotTemplate(el)
                     .then(resp => {
                         let sectors = resp('.domain-columns ul li input');
-                        var arr = [];
+                        let arr = [];
                         for (let i = 0; i < sectors.length; i++) {
                             arr.push(`ih=${sectors[i].attribs.id}&`);
                         }
@@ -64,7 +61,7 @@ async function redirectTo() {
     }
 }
 
-function companiesUrl(ans) {
+async function companiesUrl(ans) {
     /**
      * This method gives sectors url
      */
@@ -73,7 +70,7 @@ function companiesUrl(ans) {
         ans.forEach((el) => {
             url += el;
         });
-        parseHtml(url);
+      await parseHtml(url);
     } catch (err) {
         console.log(err.message, 'companiesUrl');
     }
@@ -90,12 +87,12 @@ function check(test) {
     }
 }
 
-function parseHtml(url) {
+async function parseHtml(url) {
     /**
      * It takes each sector url and send all page url of each sector to getRequests method
      */
     try {
-        return gotTemplate(url, {decompress: false})
+        return await gotTemplate(url)
             .then(resp => {
                 let pageArray = [];
                 let selector = resp('.pagination-nav a');
@@ -110,13 +107,12 @@ function parseHtml(url) {
                 String.prototype.splice = function (start, delCount, newSubStr) {
                     return this.slice(0, start) + newSubStr + this.slice(start + Math.abs(delCount));
                 };
-                var regex = /companies/g;
+                let regex = /companies/g;
                 if (regex.test(url) == true) {
 
-                    var index = regex.lastIndex + 1;
-                    let requestArray = [];
+                    let index = regex.lastIndex + 1;
                     for (let i = 1; i < max + 1; i++) {
-                        var newUrl = url.splice(index, 0, `pg-${i}/`);
+                        let newUrl = url.splice(index, 0, `pg-${i}/`);
                         await getRequests(newUrl);
                     }
                 }
@@ -131,7 +127,7 @@ async function getRequests(request) {
      * It send only 5 request at once simultaneously
      */
     try {
-        return await gotTemplate(request, {decompress: false})
+        return await gotTemplate(request)
             .then(async resp => {
                 let companyLinks = resp('.company-info a');
                 let companiesArray = [];
@@ -154,35 +150,35 @@ async function sendRequest(url) {
      */
     try {
         for (let x of url) {
-            await gotTemplate(x, {decompress: false})
+            await gotTemplate(x)
                 .then(ans => {
-                        var name = check(ans('.company-baseline h1 span').text());
+                        let name = check(ans('.company-baseline h1 span').text());
                         if (ans('.company-country span').length > 1) {
                             var country = check(ans('.company-country span')[1].children[0].data);
                         } else {
                             var country = 'null';
                         }
-                        var address = check(ans('dd[itemprop="addressLocality"]').text());
-                        var vat = check(ans('dd span[itemprop="vatID"]').text());
+                    let address = check(ans('dd[itemprop="addressLocality"]').text());
+                    let vat = check(ans('dd span[itemprop="vatID"]').text());
                         if (ans('.js-breadcrumb-back-heading a').length > 0) {
                             var categories = check(ans('.js-breadcrumb-back-heading a')[0].attribs.title);
                         } else {
                             var categories = 'null';
                         }
-                        var head_count = check(ans('.data-list li .icon-key-people').text());
-                        var sales_staff = check(ans('.data-list li .icon-key-sales').text());
-                        var sales_turnover = check(ans('.data-list li .icon-key-ca').text());
-                        var phone_number = check(ans('.js-num-tel').text().replace(/\s+/g, ''));
+                        let head_count = check(ans('.data-list li .icon-key-people').text());
+                    let sales_staff = check(ans('.data-list li .icon-key-sales').text());
+                    let sales_turnover = check(ans('.data-list li .icon-key-ca').text());
+                    let phone_number = check(ans('.js-num-tel').text().replace(/\s+/g, ''));
                         if (ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]').length > 0) {
                             var website = ans('.page__layout-sidebar--container-desktop .page-action[itemprop="url"]')[0].attribs.title;
                         } else {
                             var website = 'null';
                         }
-                        var export_sales = check(ans('.data-list li .icon-key-export').text());
-                        var keyword_tags = check(ans('.keyword-tag li[itemprop="itemListElement"]'));
-                        var description = check(ans('.company-description').text());
-                        var established_year = check(ans('.organisation-list li .data--big').text());
-                        var keywordsArray = [];
+                    let export_sales = check(ans('.data-list li .icon-key-export').text());
+                    let keyword_tags = check(ans('.keyword-tag li[itemprop="itemListElement"]'));
+                    let description = check(ans('.company-description').text());
+                    let established_year = check(ans('.organisation-list li .data--big').text());
+                    let keywordsArray = [];
                         for (let j = 0; j < keyword_tags.length; j++) {
                             keywordsArray.push(keyword_tags[j].children[0].data);
                         }
